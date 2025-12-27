@@ -1,0 +1,135 @@
+1. Functions
+    1.1 Types of functions
+        Linear, quadratic, polynomial, rational, exponential, logarithmic, piecewise
+    1.2 Domain and range
+        Finding domain/range, restrictions, special cases
+    1.3 Function transformations
+        Shifts, reflections, stretches, compressions
+    1.4 Quadratic equations & roots
+        Factoring, quadratic formula, discriminant
+    1.5 Trigonometric functions
+        Basic trig: sin, cos, tan, cot, sec, csc
+        Trig identities: Pythagorean, reciprocal, co-function, double-angle, sum/difference formulas
+
+2. Limits & Continuity
+    2.1 Average and instantaneous rate of change
+        Connection to slope of secant/tangent
+    2.2 Definition of limit
+        Intuitive and formal
+    2.3 Limit laws
+        Sum, difference, product, quotient, powers, composition
+    2.4 One-sided limits & limits at infinity
+    2.5 Continuity
+        Definition, types of discontinuities
+    2.6 L’Hôpital’s Rule
+        0/0 and ∞/∞ forms
+
+3. Derivatives
+    3.1 Basic derivatives
+        Polynomials, exponential functions, logarithms
+    3.2 Trig derivatives
+        sin, cos, tan, cot, sec, csc
+    3.3 Rules of differentiation
+        Power rule, product rule, quotient rule, chain rule
+    3.4 Implicit differentiation
+    3.5 Higher-order derivatives
+    3.6 Applications of derivatives
+        Tangent lines & linear approximation
+        Related rates
+        Optimization (max/min problems)
+
+4. Integrals
+    4.1 Antiderivatives / Indefinite integrals
+        Polynomials, exponential, logarithmic, trig functions
+    4.2 Definite integrals & Fundamental Theorem of Calculus
+    4.3 Integration techniques
+        Substitution
+        Integration by parts
+        Partial fractions
+        Trig substitution
+    4.4 Numerical integration
+        Riemann sums, trapezoid rule, midpoint rule, Simpson’s rule
+    4.5 Applications of integrals
+        Area under a curve
+        Motion problems (position, velocity, displacement)
+        Average value of a function
+
+
+
+Derivatives 
+    power, product, quotient and chain rule (+trig)
+    Optimization (varying difficulty)
+
+Integrals
+    substiution
+    parts
+    + trig & partial fractions
+
+steps:
+
+frontend
+ux side
+user
+starts new chat
+stores new chat data in ss memory (no db persistence)
+loop until user closes tab:
+    enters prompt
+    sent to server
+    server parses prompt for intent 
+    match it with predefined set of intents, otherwise ask user for clarification
+    for intent, feed to llm with previous chat data
+    append to existing chat data
+    send to user
+
+backend
+knowledge bank
+    kvps to feed llm for different scenarios
+    chunked as much as possible
+vectorized thingy
+    i dont know what this would look like can you explain
+fine tuned llm for speaking patterns (optional)
+intent list that maps to different things from the knowledge bank
+ephermeral storage of user conversations (no auth)
+
+
+chatgpt:
+
+Application Objectives
+
+Frontend
+
+Provide a session-based tutoring chat interface
+
+Maintain ephemeral in-memory chat state per session
+
+Support iterative question refinement without user authentication
+
+Backend
+
+Perform intent detection on user queries using fuzzy matching and semantic similarity
+
+Route user queries to intent-specific instructional components
+
+Retrieve structured knowledge chunks using vector similarity and metadata filtering
+
+Assemble context-aware prompts for an LLM-based tutoring agent
+
+Maintain lightweight session state (topic, intent, step index)
+
+Return adaptive, step-aligned explanations to the frontend
+
+Knowledge System
+
+Curate a structured, chunked calculus knowledge base
+
+Annotate content with pedagogical roles (intuition, procedure, mistakes)
+
+Enable targeted retrieval aligned with learning intent
+
+LLM Integration
+
+Use an LLM for natural language explanation and adaptation
+
+Avoid reliance on the LLM for pedagogical decision-making
+
+Optionally support fine-tuning for tutoring tone
