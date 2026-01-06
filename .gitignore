@@ -1,0 +1,10 @@
+/backend/.env
+/backend/.gitignore
+/backend/.venv
+/backend/__pycache__/
+
+/backend/textbooks_chunked/
+/backend/textbooks_cleaned/
+/backend/textbooks_decomposed/
+/backend/textbooks_raw/
+/backend/.vscode/
