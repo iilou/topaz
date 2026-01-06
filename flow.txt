@@ -1,0 +1,35 @@
+query (user question)
+
+classify via small llm (sllm for future):
+    - feedback (only if there is previous state in memory)
+    - new question
+    - bogus (useless question such as "what are cats")
+
+if new question:
+    classify via sllm: [list of intents] (a)
+    classify via sllm: [list of topics] (b)
+
+    if intent is "explain":
+        get list of textbook paragraphs that are similar to (b)
+        prompt w template (question + context(textbook passages))
+        do nothing with state(steps) in memory
+    
+    if intent is "solve":
+        solve with python library
+        skip llm prompting and return the answer
+        clear state(steps) in memory
+    
+    if intent is "steps":
+        solve with python library
+        get metadata from vectordb that is similar to (b) (e.g. generic steps, common mistakes, explanation)
+        get list of textbook paragraphs that are similar to (b)
+        prompt w template (question + context(textbook passages) + solution + metadata)
+        save state(steps) in memory
+
+if feedback:
+    let s be [1,2...n] for [0,n] steps in memory
+    classify via sllm which of the steps to explain (c) (can be all)
+    if none:
+        ask user for which steps they struggle with
+    prompt w template (question + context(from memory) + steps + steps_to_explain(c) + metadata(from memory))
+    do nothing with state
