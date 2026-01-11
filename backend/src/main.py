@@ -31,3 +31,17 @@ app = FastAPI(lifespan=lifespan)
 async def root():
     return {"message": "backend is running", "document_count": obj['collection'].count()}
 
+
+class ChatRequest(BaseModel):
+    question: str
+
+@app.post("/chat")
+async def chat_endpoint(request: ChatRequest):
+    question = request.question
+    
+    # placeholder for llm call
+    response = "This is a placeholder response to your question: " + question
+    
+    return {"answer": response}
+
+
