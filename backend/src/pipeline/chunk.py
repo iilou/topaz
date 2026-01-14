@@ -1,42 +1,55 @@
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 import json
+import re
 
-# 1. Load your Markdown file
-file_path = "genetics_clean.md"
-with open(file_path, "r", encoding="utf-8") as f:
-    md_text = f.read()
+def chunk_md(path, output_json):
+    with open(path, "r", encoding="utf-8") as f:
+        md_text = f.read()
+        
+    headers_to_split_on = [
+        ("#", "Header 1"),
+        ("##", "Header 2"),
+        ("###", "Header 3"),
+    ]
 
-# 2. Split by Section Headers (Structural Chunking)
-# This ensures "Chapter 1" content stays categorized under "Chapter 1"
-headers_to_split_on = [
-    ("#", "Header 1"),
-    ("##", "Header 2"),
-    ("###", "Header 3"),
-]
+    header_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+    sections = header_splitter.split_text(md_text)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1500,
+        chunk_overlap=200,
+        separators=["\n\n", "\n", ". ", " "]
+    )
 
-header_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
-sections = header_splitter.split_text(md_text)
+    final_chunks = text_splitter.split_documents(sections)
 
-# 3. Further split large sections (Recursive Chunking)
-# 1500 chars is the 'sweet spot' for Biology to keep full definitions intact
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1500,
-    chunk_overlap=200,
-    separators=["\n\n", "\n", ". ", " "]
-)
 
-final_chunks = text_splitter.split_documents(sections)
+    def make_embedding_text(chunk):
+        text = chunk.page_content
 
-# 4. Save chunks to a JSON file for your RAG pipeline
-output_data = []
-for i, chunk in enumerate(final_chunks):
-    output_data.append({
-        "id": i,
-        "content": chunk.page_content,
-        "metadata": chunk.metadata
-    })
+        # remove LaTeX blocks
+        text = re.sub(r"\$\$.*?\$\$", "", text, flags=re.DOTALL)
 
-with open("genetics_chunks.json", "w", encoding="utf-8") as f:
-    json.dump(output_data, f, indent=4)
+        # collapse tables into a short description
+        text = re.sub(r"\n\|.*?\|\n", "\n[Table present]\n", text)
 
-print(f"Success! Created {len(output_data)} chunks.")
+        # remove citation clutter
+        text = re.sub(r"\[\d+\]", "", text)
+
+        return text
+
+    # 4. Save chunks to a JSON file for your RAG pipeline
+    output_data = []
+    for i, chunk in enumerate(final_chunks):
+        #check if metadata is a blank dict
+        if not chunk.metadata:
+            chunk.metadata = {"source": "unknown"}
+        
+        output_data.append({
+            "id": i,
+            "content": chunk.page_content,
+            "metadata": chunk.metadata,
+            "embedding_text": make_embedding_text(chunk)
+        })
+
+    with open(output_json, "w", encoding="utf-8") as f:
+        json.dump(output_data, f, indent=4)

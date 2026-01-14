@@ -8,3 +8,12 @@ python-dotenv==1.2.1
 Requests==2.32.5
 google-genai==0.3.0
 fastapi[standard]>=0.115.0
+
+# HuggingFace model download + caching stack (CRITICAL for Docling)
+huggingface_hub>=0.23.0
+hf_xet
+safetensors
+transformers
+
+# Native PDF rendering backend for Docling (CRITICAL for speed & tables)
+pypdfium2
