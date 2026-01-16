@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 
-from retrieve import retrieve_docs
+from .retrieve import retrieve_docs
 
 
 def process_query(message: str, db_client: chromadb.PersistentClient, collection: chromadb.Collection, client: genai.Client, model: str) -> str:
