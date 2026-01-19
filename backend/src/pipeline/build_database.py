@@ -3,42 +3,45 @@ import chromadb
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+import numpy as np
 
 load_dotenv()
 
-# 1. Setup Gemini Client
-# Make sure you have: pip install google-genai
 client = genai.Client()
 
-# 2. Setup Persistent ChromaDB
-# This creates the 'genetics_db' folder on your hard drive
-db_client = chromadb.PersistentClient(path="./genetics_db")
-collection = db_client.get_or_create_collection(name="genetics_textbook")
-
-# 3. Load your JSON chunks
-with open("genetics_chunks.json", "r") as f:
-    chunks = json.load(f)
-
-print(f"Starting embedding for {len(chunks)} chunks...")
-
-# 4. Embed and Store
-for chunk in chunks:
-    # Generate the vector
-    result = client.models.embed_content(
-        model="text-embedding-004",
-        contents=chunk["content"],
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
-    )
+def add_to_vector_database(json_chunks_path, chroma_db_path, collection_name, specific_collection_name):
+    db_client = chromadb.PersistentClient(path=chroma_db_path)
+    collection = db_client.get_or_create_collection(name=collection_name)
+    collection_specific = db_client.get_or_create_collection(name=specific_collection_name)
     
-    # Static vector extracted from the API response
-    vector = result.embeddings[0].values
+    with open(json_chunks_path, "r") as f:
+        chunks = json.load(f)
+        
+    print(f"Starting embedding for {len(chunks)} chunks...")
+    
+    for chunk in chunks:
+        # embed
+        result = client.models.embed_content(
+            model="text-embedding-004",
+            contents=chunk["embedding_text"],
+            # contents=chunk["content"],
+            config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
+        )
+        
+        vector = result.embeddings[0].values
+        v = np.array(vector)
+        v = v / np.linalg.norm(v)  # normalize
 
-    # Add to ChromaDB
-    collection.add(
-        ids=[str(chunk["id"])],
-        embeddings=[vector],
-        documents=[chunk["content"]],
-        metadatas=[chunk["metadata"]]
-    )
-
-print("Done! Your genetics_db folder is now populated with static vectors.")
+        collection.add(
+            ids=[str(chunk["id"])],
+            embeddings=[v.tolist()],
+            documents=[chunk["content"]],
+            metadatas=[chunk["metadata"]],
+        )
+        
+        collection_specific.add(
+            ids=[str(chunk["id"])],
+            embeddings=[v.tolist()],
+            documents=[chunk["content"]],
+            metadatas=[chunk["metadata"]],
+        )

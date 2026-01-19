@@ -33,7 +33,7 @@ export default function Home() {
                         <input
                             className="w-[90%] bg-none outline-none text-lg h-12 p-2 rounded-2xl"
                             type="text"
-                            placeholder={`Ask me anything...`}
+                            placeholder={`Ask me anything... (WIP, click header for now)`}
                         />
                         <Search className=" text-neutral-500 hover:text-neutral-700 hover:font-bold" />
                     </div>

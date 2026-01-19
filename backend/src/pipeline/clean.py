@@ -6,7 +6,12 @@ def clean_markdown(input_path, output_path):
 
     # 1. Remove Table of Contents (usually messy and confuses RAG)
     # This looks for the "Contents" header and removes until the first real Chapter
-    content = re.sub(r"## Contents.*?#", "#", content, flags=re.DOTALL)
+    content = re.sub(
+        r"## Contents[\s\S]*?##\s+Chapter\s+1",
+        "## Chapter 1",
+        content,
+        flags=re.IGNORECASE
+    )
 
     # 2. Remove Page Numbers
     # Matches a newline followed by a digit and a newline (common at bottom of pages)
@@ -21,12 +26,16 @@ def clean_markdown(input_path, output_path):
     }
     for bad, good in replacements.items():
         content = content.replace(bad, good)
-
-    # 4. Remove empty Image tags if you don't plan to use them
+    
     content = content.replace("", "")
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(content)
     print("Markdown cleaned successfully!")
 
-clean_markdown("genetics_full.md", "genetics_clean.md")
+# clean_markdown("genetics_full.md", "genetics_clean.md")
+
+# TOPIC = "biochemistry"
+# NUM = 1
+
+# BASEDIR = Path(__file__).resolve().parent
