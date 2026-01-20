@@ -9,7 +9,6 @@ import psycopg2
 from psycopg2 import sql
 from contextlib import contextmanager
 
-from contextlib import contextmanager
 from fastapi import Depends, FastAPI, HTTPException, Request
 
 from src.utils.process import process_query
