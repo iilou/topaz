@@ -8,7 +8,7 @@ from psycopg2 import sql
 from pgvector.psycopg2 import register_vector
 from pgvector import Vector
 
-from retrieve import retrieve_docs
+from .retrieve import retrieve_docs
 
 def process_query(message: str, cur: psycopg2.extensions.cursor, collection: str, client: genai.Client, model: str, debug=False) -> str:
     # retrieved_docs = retrieve_docs(message, collection, client, k=5, threshold=0.8)
@@ -98,4 +98,4 @@ def wfwefwe():
     results = process_query(query, cur, "biology_paragraphs", client, model="gemini-2.5-flash", debug=False)
     print("res: ", results)
     
-wfwefwe()
+# wfwefwe()
