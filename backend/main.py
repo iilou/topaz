@@ -1,7 +1,6 @@
 from google import genai
 from dotenv import load_dotenv
 from pydantic import BaseModel
-import chromadb
 import os
 import time
 
@@ -13,15 +12,16 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 
 from src.utils.process import process_query
 
+import sys
+
 load_dotenv()
 DB_URL = os.getenv("DB_URL")
 
 light_llm_model = "gemini-2.0-flash-lite"
-prompting_llm_model = "gemini-2.0-flash"
+prompting_llm_model = "gemini-2.5-flash"
 
 client = genai.Client()
-db_client = chromadb.PersistentClient(path="./vector_db")
-collection = db_client.get_or_create_collection(name="biology_paragraphs")
+collection_name = "biology_paragraphs"
 
 @contextmanager
 def get_conn():
@@ -35,7 +35,7 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"message": "backend is running", "document_count": collection.count()}
+    return {"message": "backend is running", "status": "ok"}
 
 class ChatHistory(BaseModel):
     user_id: str
@@ -150,8 +150,9 @@ def create_chat_history_if_not_exists(user_id: str, name, description: str = "")
         name=returned[1]
     )
 
-def query(question: str, llm: str) -> str:
-    response = process_query(question, llm_model=llm, client=client, collection=collection)
+def query(question: str, llm: str, cur: psycopg2.extensions.cursor) -> str:
+    # response = process_query(question, llm_model=llm, client=client, collection=collection)
+    response = process_query(question, cur, "biology_paragraphs", client, model=llm, debug=False)
     return response
 
 def create_chat_history_message(history_id: str, message: str, response: str, llm: str, user_id: str) -> None:
@@ -209,3 +210,6 @@ def create_chat_message(request: QueryRequest, history_id: str, user_id: str = D
     return QueryAppendResponse(
         message=chat_message
     )
+
+
+#pip install fastapi google-genai python-dotenv psycopg2-binary uvicorn spacy pgvector
