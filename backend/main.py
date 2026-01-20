@@ -13,11 +13,13 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 
 from src.utils.process import process_query
 
+import sys
+
 load_dotenv()
 DB_URL = os.getenv("DB_URL")
 
 light_llm_model = "gemini-2.0-flash-lite"
-prompting_llm_model = "gemini-2.0-flash"
+prompting_llm_model = "gemini-2.5-flash"
 
 client = genai.Client()
 db_client = chromadb.PersistentClient(path="./vector_db")
