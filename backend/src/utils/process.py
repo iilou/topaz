@@ -10,7 +10,7 @@ from pgvector import Vector
 
 from .retrieve import retrieve_docs
 
-def process_query(message: str, cur: psycopg2.extensions.cursor, collection: str, client: genai.Client, model: str, debug=False) -> str:
+def process_query(message: str, cur: psycopg2.extensions.cursor, collection: str, client: genai.Client, model: str, memory_size: int = 5, history_id: str | None = None, debug=False) -> str:
     # retrieved_docs = retrieve_docs(message, collection, client, k=5, threshold=0.8)
     res = retrieve_docs(message, cur, collection, client, k=5, threshold=0.9, debug=debug)
 
@@ -29,6 +29,31 @@ def process_query(message: str, cur: psycopg2.extensions.cursor, collection: str
     if debug:
         print(f"--- CONTEXT BLOCKS (prev) ---")
         print(context_blocks[:200])
+        
+    
+    if history_id and memory_size > 0:
+        sql_query = sql.SQL("""
+            SELECT message, response
+            FROM chat_history_message
+            WHERE history_id = %s
+            ORDER BY created_at DESC
+            LIMIT %s
+        """)
+        cur.execute(sql_query, (history_id, memory_size))
+        history_rows = cur.fetchall()
+        
+        if debug:
+            print(f"--- Retrieved {len(history_rows)} history rows ---")
+            print(history_rows)
+        
+        if history_rows:
+            context_blocks += f"\n\n--- STUDENT-TEACHER PREVIOUS INTERACTIONS (ORDERED MOST RECENT FIRST, LIMIT OF {memory_size}) ---\n"
+            for i, row in enumerate(history_rows):
+                prev_message = row[0]
+                prev_response = row[1]
+                context_blocks += f"\n--- PRIOR EXCHANGE #{i+1} ---\n"
+                context_blocks += f"STUDENT: {prev_message}\n"
+                context_blocks += f"TUTOR: {prev_response}\n"
     
     
     # for i, item in enumerate(retrieved_docs):
@@ -39,20 +64,19 @@ def process_query(message: str, cur: psycopg2.extensions.cursor, collection: str
     system_instructions = (
         "You are an AI biology tutor helping a student understand core biological concepts. "
         "Use the provided textbook context to answer questions accurately and clearly. "
+        "You are given previous student-tutor interactions to maintain context up to a limit. "
         "Synthesize information across the context when appropriate. "
         "Do not introduce facts that are not supported by the context. "
         "If the context is insufficient to fully answer the question, state that explicitly."
     )
 
-    user_message = f"""
-    CONTEXT:
-    {context_blocks}
+    user_message = f"""CONTEXT:
+{context_blocks}
 
-    QUESTION:
-    {message}
+QUESTION:
+{message}
 
-    Provide a clear, student-friendly explanation:
-    """
+Provide a clear, student-friendly explanation:"""
     
     if debug:
         print(f"--- FINAL PROMPT ---")

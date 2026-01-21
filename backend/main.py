@@ -19,6 +19,7 @@ DB_URL = os.getenv("DB_URL")
 
 light_llm_model = "gemini-2.0-flash-lite"
 prompting_llm_model = "gemini-2.5-flash"
+naming_llm_model = "gemini-2.5-flash"
 
 client = genai.Client()
 collection_name = "biology_paragraphs"
@@ -150,22 +151,20 @@ def create_chat_history_if_not_exists(user_id: str, name, description: str = "")
         name=returned[1]
     )
 
-def query(question: str, llm: str, cur: psycopg2.extensions.cursor) -> str:
+def query(question: str, llm: str, cur: psycopg2.extensions.cursor, memory_size: int = 5, history_id: str | None = None) -> str:
     # response = process_query(question, llm_model=llm, client=client, collection=collection)
-    response = process_query(question, cur, "biology_paragraphs", client, model=llm, debug=False)
+    response = process_query(question, cur, "biology_paragraphs", client, model=llm, memory_size=memory_size, history_id=history_id, debug=True)
     return response
 
-def create_chat_history_message(history_id: str, message: str, response: str, llm: str, user_id: str) -> None:
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            insert_query = sql.SQL("""
-                INSERT INTO chat_history_message (history_id, message, response, llm, user_id)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING id, created_at
-            """)
-            cur.execute(insert_query, (history_id, message, response, llm, user_id))
-            returned = cur.fetchone()
-            conn.commit()
+def create_chat_history_message(history_id: str, message: str, response: str, llm: str, user_id: str, conn: psycopg2.extensions.connection, cur: psycopg2.extensions.cursor) -> ChatHistoryItem:
+    insert_query = sql.SQL("""
+        INSERT INTO chat_history_message (history_id, message, response, llm, user_id)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING id, created_at
+    """)
+    cur.execute(insert_query, (history_id, message, response, llm, user_id))
+    returned = cur.fetchone()
+    conn.commit()
 
     return ChatHistoryItem(
         message=message,
@@ -180,15 +179,25 @@ def create_chat_history_message(history_id: str, message: str, response: str, ll
 def create_chat_message_no_history(request: QueryRequest, user_id: str = Depends(get_current_user_id)):
     print(f"Received query from user_id: ({user_id}): ", request)
     
-    create_response = create_chat_history_if_not_exists(user_id, description="Auto-created chat history", name="New Chat")
+    # new_history_name_prompt = """Generate a short, descriptive name for a chat history between a student and an AI biology tutor based on the student's first question. The name should be concise (3-7 words), relevant to biology, and reflect the topic of the question. Avoid generic titles; instead, focus on key terms or concepts mentioned in the question."""
+    new_history_name_prompt = """Generate a descriptive name for a chat history between a student and an AI biology tutor based on the student's first question. The name should be concise (3-7 words), relevant to biology, and reflect the topic of the question. If the question is not biology-related, ignore the prompt and generate a generic name."""
+    new_history_name_response = client.models.generate_content(
+        model=naming_llm_model,
+        contents=new_history_name_prompt + "\n\nStudent's Question: " + request.message + "\n\nChat History Name:",
+        config=genai.types.GenerateContentConfig(
+            temperature=0.7,
+            max_output_tokens=200,
+        )
+    )
+    
+    create_response = create_chat_history_if_not_exists(user_id, description="Auto-created chat history", name=new_history_name_response.text.strip())
     print(f"Created new chat history for user_id: ({user_id}): ", create_response)
     
-    response = "This is a placeholder response to your question: " + request.message
-    time.sleep(5)
-    # response = query(request.message, request.llm)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            response: str = query(request.message, request.llm, cur)
     
-    chat_message = create_chat_history_message(create_response.history_id, request.message, response, request.llm, user_id)
-    print(f"Created chat message for history_id: {create_response.history_id}: ", chat_message)
+            chat_message: ChatHistoryItem = create_chat_history_message(create_response.history_id, request.message, response, request.llm, user_id, conn, cur)
     
     return QueryCreateResponse(
         history=create_response,
@@ -198,14 +207,24 @@ def create_chat_message_no_history(request: QueryRequest, user_id: str = Depends
 # send new message
 @app.post("/chat/history/{history_id}/messages", response_model=QueryAppendResponse)
 def create_chat_message(request: QueryRequest, history_id: str, user_id: str = Depends(get_current_user_id)):
-    print(f"Received query from user_id: ({user_id}): ", request)
+    print(f"-------------------- received query from user_id: ({user_id}): --------------------", request)
     
-    response = "This is a placeholder response to your question: " + request.message + " very long answer here to simulate processing. " * 50
-    time.sleep(5)
-    # response = query(request.message, request.llm)
+    # response = "This is a placeholder response to your question: " + request.message + " very long answer here to simulate processing. " * 50
+    # time.sleep(5)
+    # response = query(request.message, request.llm, 
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            response: str = query(request.message, request.llm, cur, history_id=history_id, memory_size=20)
     
-    chat_message = create_chat_history_message(history_id, request.message, response, request.llm, user_id)
-    print(f"Created chat message for history_id: {history_id}: ", chat_message)
+            chat_message: ChatHistoryItem = create_chat_history_message(history_id, request.message, response, request.llm, user_id, conn, cur)
+    
+    print(f"\n----------- created chat message for history_id: {history_id}: -----------")
+    print(f"msg: {chat_message.message}")
+    print(f"resp: {chat_message.response[:100]}...")  # print first 100 chars
+    print(f"id: {chat_message.id}")
+    print(f"created_at: {chat_message.created_at}")
+    print(f"llm: {chat_message.llm}")
+    print("-----------------------------------------------------\n")
     
     return QueryAppendResponse(
         message=chat_message

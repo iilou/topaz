@@ -6,6 +6,7 @@ import ChatMessage from "./ChatMessage";
 import { Search } from "lucide-react";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 import { ChatHistoryMessage } from "@/lib/types/chat";
 import { fetchChatHistoryMessages, sendNewChatMessage } from "@/lib/data/chatHistoryMessages";
@@ -27,6 +28,8 @@ export default function ChatArea({ chatId }: ChatAreaProps) {
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
+    const router = useRouter();
+
     async function sendMessage(message: string, tempId: string) {
         const messageData: CreateChatHistoryMessage = {
             message: message,
@@ -35,6 +38,10 @@ export default function ChatArea({ chatId }: ChatAreaProps) {
 
         try {
             const res = await sendNewChatMessage(messageData, chatId || undefined);
+
+            if (res.history && !chatId) {
+                router.push(`/chat/${res.history.history_id}`);
+            }
 
             console.log("msg data", res);
 
@@ -147,8 +154,8 @@ export default function ChatArea({ chatId }: ChatAreaProps) {
                 <div className="flex gap-4 w-full justify-end items-center">
                     <DropdownButton
                         setStateFunc={setTier}
-                        values={["gemini-2.0-flash"]}
-                        labels={["Gemini 2.0 Flash"]}
+                        values={["gemini-2.5-flash"]}
+                        labels={["Gemini 2.5 Flash"]}
                         currentIndex={0}
                     />
                 </div>
