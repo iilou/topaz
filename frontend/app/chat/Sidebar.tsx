@@ -16,7 +16,7 @@ interface SideBarProps {
 }
 
 export default function SideBar({ chatId }: SideBarProps) {
-    const [sideBarOpen, setSidebarOpen] = useState(false);
+    const [sideBarOpen, setSidebarOpen] = useState(true);
     const [chatHistoryList, setChatHistoryList] = useState<ChatHistory[]>([]);
 
     const router = useRouter();
@@ -32,7 +32,7 @@ export default function SideBar({ chatId }: SideBarProps) {
         }
 
         loadChatHistories();
-    }, []);
+    }, [chatId]);
 
     return (
         <>
@@ -48,30 +48,36 @@ export default function SideBar({ chatId }: SideBarProps) {
                 {...(!sideBarOpen ? { style: { display: "none" } } : {})}
             >
                 <div className="absolute left-0 right-0 top-0 bottom-0 z-30 shadow-[0_0_0_1px_#00000099] rounded-md pointer-events-none"></div>
-                <div className="mr-2 mt-2 flex justify-end">
-                    <button
-                        onClick={() => setSidebarOpen(false)}
-                        className="flex gap-1 items-center px-3 py-1 rounded-md bg-dropdown-button-bg text-neutral-50 hover:text-neutral-200 font-bold text-base shadow-lg hover:bg-dropdown-button-hover-bg transition-all ease-linear duration-50"
-                    >
-                        <X size={20} strokeWidth={3} />
-                    </button>
-                </div>
-                <div className="flex flex-col items-center justify-center px-8 mt-6">
-                    <h2 className="text-3xl font-bold text-center px-4 text-cyan-950">Your Chats</h2>
-                    <p className="text-md italic text-center text-neutral-600 font-normal px-4">
-                        Continue your learning journey
-                    </p>
-                    <div className="w-full mt-8 space-y-1">
-                        {chatHistoryList.map((item, index) => (
-                            <SidebarHistoryItem
-                                key={index}
-                                title={item.name || "Untitled Chat"}
-                                chatId={item.history_id}
-                                current={chatId === item.history_id}
-                            />
-                        ))}
+                <div className="w-full h-full relative flex flex-col">
+                    <div className="mr-2 mt-2 flex justify-end h-fit">
+                        <button
+                            onClick={() => setSidebarOpen(false)}
+                            className="flex gap-1 items-center px-3 py-1 rounded-md bg-dropdown-button-bg text-neutral-50 hover:text-neutral-200 font-bold text-base shadow-lg hover:bg-dropdown-button-hover-bg transition-all ease-linear duration-50"
+                        >
+                            <X size={20} strokeWidth={3} />
+                        </button>
+                    </div>
+                    <div className="flex flex-col items-center px-8 mt-6 mb-14 relative flex-1 min-h-0">
+                        <h2 className="text-3xl font-bold text-center px-4 text-cyan-950">Your Chats</h2>
+
+                        <p className="text-md italic text-center text-neutral-600 font-normal px-4">
+                            Continue your learning journey
+                        </p>
+
+                        {/* scrollable list */}
+                        <div className="w-full mt-8 space-y-1 flex-1 overflow-y-auto relative min-h-0 px-4">
+                            {chatHistoryList.map((item, index) => (
+                                <SidebarHistoryItem
+                                    key={index}
+                                    title={item.name || "Untitled Chat"}
+                                    chatId={item.history_id}
+                                    current={chatId === item.history_id}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </div>
+
                 <div className="absolute bottom-2 right-2">
                     <button
                         className="px-4 py-2 rounded-md text-sm cursor-pointer bg-dropdown-button-bg text-neutral-50 font-semibold hover:bg-dropdown-button-hover-bg transition-all ease-linear duration-50"

@@ -12,7 +12,7 @@ from psycopg2 import sql
 
 def retrieve_docs(query: str, cur: psycopg2.extensions.cursor, collection: str, client: genai.Client, k: int = 5, threshold: float = 0.9, debug: bool = False) -> list:
     """Retrieve relevant documents from the ChromaDB based on the query."""
-    print(f"----------- retrieving docs for query: {query}")
+    print(f"\n\n----------- retrieving docs for query: {query}")
     
     # generate embedding from gemini
     query_embedding_res = client.models.embed_content(
@@ -24,15 +24,19 @@ def retrieve_docs(query: str, cur: psycopg2.extensions.cursor, collection: str, 
 
     # search vector db
     sql_query = sql.SQL("""
-        SELECT content, metadata, embedding <-> %s AS distance
-        FROM {table}
-        WHERE embedding <-> %s < %s
+        SELECT content, metadata, distance
+        FROM (
+            SELECT content, metadata, embedding <-> %s::vector AS distance
+            FROM {table}
+        ) t
+        WHERE distance < %s
         ORDER BY distance
         LIMIT %s;
     """).format(table=sql.Identifier(collection))
+
     cur.execute(
         sql_query,
-        (Vector(query_vector), Vector(query_vector), threshold, k)
+        (query_vector, threshold, k)
     )
     rows = cur.fetchall()
         
@@ -44,6 +48,15 @@ def retrieve_docs(query: str, cur: psycopg2.extensions.cursor, collection: str, 
             print(f"doc: {row[0]}")
             print(f"metadata: {row[1]}")
             print(f"distance: {row[2]}")
+            
+    else:
+        print(f"----------- retrieved {len(rows)} docs from db: preview(100 chars): -----------")
+        for i, row in enumerate(rows):
+            print(f"res {i+1} doc preview: {row[0][:400]}...")
+            print(f"metadata: ", row[1])
+            print(f"distance: {row[2]}")
+            print("")
+        print("-----------------------------------------------------\n")
         
     return rows
 
