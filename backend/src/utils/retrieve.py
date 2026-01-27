@@ -9,8 +9,12 @@ from pgvector import Vector
 import psycopg2
 from psycopg2 import sql
 
+from .rerank import rerank_results
 
-def retrieve_docs(query: str, cur: psycopg2.extensions.cursor, collection: str, client: genai.Client, k: int = 5, threshold: float = 0.9, debug: bool = False) -> list:
+from langchain_core.documents import Document
+
+
+def retrieve_docs(query: str, cur: psycopg2.extensions.cursor, collection: str, client: genai.Client, k: int, n: int, rerank=True, debug: bool = False) -> list[str]:
     """Retrieve relevant documents from the ChromaDB based on the query."""
     print(f"\n\n----------- retrieving docs for query: {query}")
     
@@ -24,22 +28,43 @@ def retrieve_docs(query: str, cur: psycopg2.extensions.cursor, collection: str, 
 
     # search vector db
     sql_query = sql.SQL("""
-        SELECT content, metadata, distance
+        SELECT content, metadata, distance, is_validated, score
         FROM (
-            SELECT content, metadata, embedding <-> %s::vector AS distance
+            SELECT content, metadata, embedding <-> %s::vector AS distance, is_validated, score
             FROM {table}
         ) t
-        WHERE distance < %s
         ORDER BY distance
         LIMIT %s;
     """).format(table=sql.Identifier(collection))
 
     cur.execute(
         sql_query,
-        (query_vector, threshold, k)
+        (query_vector, k)
     )
     rows = cur.fetchall()
         
+    if rerank:
+        print(f"Reranking retrieved documents...")
+        reranked_content = rerank_results(query, [row[0] for row in rows])
+        
+        # relavence_scores = [reranked_content["data"][i]["relevance_score"] for i in range(len(reranked_content["data"]))]
+        # index = [reranked_content["data"][i]["index"] for i in range(len(reranked_content["data"]))]
+        
+        if debug:
+            print(f"--- RERANKED RESULTS ---")
+            for idx, ranked in enumerate(reranked_content["data"]):
+                print(f"----------------------------")
+                print(f"Rank {idx+1}:")
+                print(f"Index in original results: {ranked['index']}")
+                print(f"Relevance Score: {ranked['relevance_score']}")
+                print(f"Document Content: {ranked['document']}")
+            print(f"----------------------------\n")
+            
+        # rearrange rows based on reranked indices
+        rows = [rows[ranked['index']] + (ranked['relevance_score'],) for ranked in reranked_content["data"]]
+            
+        
+    
     # debug print
     if debug:
         print(f"--- RETRIVAL RESULTS ---")
@@ -48,20 +73,18 @@ def retrieve_docs(query: str, cur: psycopg2.extensions.cursor, collection: str, 
             print(f"doc: {row[0]}")
             print(f"metadata: {row[1]}")
             print(f"distance: {row[2]}")
-            
-    else:
-        print(f"----------- retrieved {len(rows)} docs from db: preview(100 chars): -----------")
-        for i, row in enumerate(rows):
-            print(f"res {i+1} doc preview: {row[0][:400]}...")
-            print(f"metadata: ", row[1])
-            print(f"distance: {row[2]}")
-            print("")
-        print("-----------------------------------------------------\n")
-        
-    return rows
+            print(f"is_validated: {row[3]}")
+            print(f"score: {row[4]}")
+            if rerank:
+                print(f"relevance_score: {row[5]}")
+            print("\n")
+        print(f"-------------------------\n")
+    
+    # return top n results
+    return rows[:n]
 
 # test function
-def testasdffs():
+def testasdffs(rerank: bool = False):
     load_dotenv()
 
     DB_URL = os.getenv("DB_URL")
@@ -71,18 +94,29 @@ def testasdffs():
     conn = psycopg2.connect(DB_URL, sslmode='require')
     register_vector(conn)
     cur = conn.cursor()
-    k = 5
-    threshold = 0.9
+    k = 20
     
     # biochemistry example
     query = "What are the primary functions of DNA polymerase?"
-    results = retrieve_docs(query, cur, "biology_paragraphs", client, k=k, threshold=threshold, debug=True)
+    results = retrieve_docs(query, cur, "vector_db_0", client, k, debug=True)
     
     # genetics example
     query = "What is the role of mRNA in protein synthesis?"
-    results = retrieve_docs(query, cur, "biology_paragraphs", client, k=k, threshold=threshold, debug=True)
+    results = retrieve_docs(query, cur, "vector_db_0", client, k, debug=True)
     
-# testasdffs()
+    #rerank test
+    # if rerank:
+    #     reranked_content = rerank_results(query, [row[0] for row in results])
+    #     print(f"Reranked Documents:")
+    #     for i, ranked in enumerate(reranked_content["data"][:5]):
+    #         print(f"--- Reranked Document {i+1} ---")
+    #         print(ranked)
+    #         print("\n")
+            
+    #     # return top 5 reranked
+    #     return reranked_content["data"][:5]
+    
+# testasdffs(True)
     
     
     
