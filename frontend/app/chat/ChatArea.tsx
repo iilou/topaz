@@ -39,6 +39,11 @@ export default function ChatArea({ chatId }: ChatAreaProps) {
         try {
             const res = await sendNewChatMessage(messageData, chatId || undefined);
 
+            // check if res is empty
+            if (!res) {
+                throw new Error("No response from server");
+            }
+
             if (res.history && !chatId) {
                 router.push(`/chat/${res.history.history_id}`);
             }
@@ -86,7 +91,7 @@ export default function ChatArea({ chatId }: ChatAreaProps) {
                     message: message,
                     response: "Thinking...",
                     timestamp: new Date().toISOString(),
-                    llm: "gemini-2.0-flash",
+                    llm: "gemini-2.5-flash",
                     id: tempId,
                 },
             ]);
@@ -108,11 +113,15 @@ export default function ChatArea({ chatId }: ChatAreaProps) {
     useEffect(() => {
         async function fetchChatHistory() {
             if (!chatId) {
+                setCanType(() => null);
                 setChatHistory([]);
                 return;
             }
             try {
+                setCanType(() => "loading");
                 const messages = await fetchChatHistoryMessages(chatId);
+                setCanType(() => null);
+
                 setChatHistory(messages);
                 console.log("Fetched chat history messages:", messages);
             } catch (error) {

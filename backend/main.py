@@ -8,6 +8,7 @@ import psycopg2
 from psycopg2 import sql
 from contextlib import contextmanager
 
+# from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi import Depends, FastAPI, HTTPException, Request
 
 from src.utils.process import process_query
@@ -17,12 +18,12 @@ import sys
 load_dotenv()
 DB_URL = os.getenv("DB_URL")
 
-light_llm_model = "gemini-2.0-flash-lite"
+light_llm_model = "gemini-2.5-flash-lite"
 prompting_llm_model = "gemini-2.5-flash"
 naming_llm_model = "gemini-2.5-flash"
 
 client = genai.Client()
-collection_name = "biology_paragraphs"
+collection_name = "vector_db_0"
 
 @contextmanager
 def get_conn():
@@ -153,7 +154,7 @@ def create_chat_history_if_not_exists(user_id: str, name, description: str = "")
 
 def query(question: str, llm: str, cur: psycopg2.extensions.cursor, memory_size: int = 5, history_id: str | None = None) -> str:
     # response = process_query(question, llm_model=llm, client=client, collection=collection)
-    response = process_query(question, cur, "biology_paragraphs", client, model=llm, memory_size=memory_size, history_id=history_id, debug=True)
+    response = process_query(question, cur, collection_name, client, model=llm, memory_size=memory_size, history_id=history_id, debug=False)
     return response
 
 def create_chat_history_message(history_id: str, message: str, response: str, llm: str, user_id: str, conn: psycopg2.extensions.connection, cur: psycopg2.extensions.cursor) -> ChatHistoryItem:
@@ -220,7 +221,7 @@ def create_chat_message(request: QueryRequest, history_id: str, user_id: str = D
     
     print(f"\n----------- created chat message for history_id: {history_id}: -----------")
     print(f"msg: {chat_message.message}")
-    print(f"resp: {chat_message.response[:100]}...")  # print first 100 chars
+    print(f"resp: {chat_message.response}")  # print first 100 chars
     print(f"id: {chat_message.id}")
     print(f"created_at: {chat_message.created_at}")
     print(f"llm: {chat_message.llm}")

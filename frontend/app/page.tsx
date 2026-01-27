@@ -1,6 +1,6 @@
 import HomeBackground from "./HomeBackground";
+import SearchBar from "./SearchBar";
 
-import { Search } from "lucide-react";
 import { AuroraText } from "@/components/ui/aurora-text";
 
 export default function Home() {
@@ -27,17 +27,7 @@ export default function Home() {
                         </button>
                     </div>
                 </div>
-
-                <div className="w-[95%] max-w-350 mx-auto mt-20 mb-16" id="search">
-                    <div className="mt-2 w-full py-2 bg-neutral-200 rounded-2xl flex items-center justify-center shadow-xl">
-                        <input
-                            className="w-[90%] bg-none outline-none text-lg h-12 p-2 rounded-2xl"
-                            type="text"
-                            placeholder={`Ask me anything... (WIP, click header for now)`}
-                        />
-                        <Search className=" text-neutral-500 hover:text-neutral-700 hover:font-bold" />
-                    </div>
-                </div>
+                <SearchBar />
             </div>
         </div>
     );
