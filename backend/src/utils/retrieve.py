@@ -11,8 +11,6 @@ from psycopg2 import sql
 
 from .rerank import rerank_results
 
-from langchain_core.documents import Document
-
 
 def retrieve_docs(query: str, cur: psycopg2.extensions.cursor, collection: str, client: genai.Client, k: int, n: int, rerank=True, debug: bool = False) -> list[str]:
     """Retrieve relevant documents from the ChromaDB based on the query."""
